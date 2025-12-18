@@ -213,6 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Store custom parameters for lab matching (if configured in LMS)
             $_SESSION['custom_lab_id'] = $_POST['custom_lab_id'] ?? null;
+            $_SESSION['custom_canvas_assignment_title'] = $_POST['custom_canvas_assignment_title'] ?? null;
         }
     }
 } elseif (isset($_SESSION['lti_valid']) && $_SESSION['lti_valid']) {
@@ -562,9 +563,11 @@ if (!$error && $userEmail) {
 
         // Try to find matching activity for this LTI launch
         if ($canPassbackGrade && !empty($groupedActivities)) {
+            // Use Canvas assignment title if available, otherwise fall back to resource_link_title
+            $titleToMatch = $_SESSION['custom_canvas_assignment_title'] ?? $_SESSION['resource_link_title'] ?? null;
             $matchedActivity = findMatchingActivity(
                 $groupedActivities,
-                $_SESSION['resource_link_title'] ?? null,
+                $titleToMatch,
                 $_SESSION['custom_lab_id'] ?? null
             );
         }
