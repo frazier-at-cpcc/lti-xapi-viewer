@@ -204,6 +204,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['lti_user_name'] = trim($userName);
             $_SESSION['lti_context_title'] = $_POST['context_title'] ?? 'Course';
             $_SESSION['lti_valid'] = true;
+
+            // Store LTI Outcomes parameters for grade passback
+            $_SESSION['lis_outcome_service_url'] = $_POST['lis_outcome_service_url'] ?? null;
+            $_SESSION['lis_result_sourcedid'] = $_POST['lis_result_sourcedid'] ?? null;
+            $_SESSION['resource_link_title'] = $_POST['resource_link_title'] ?? null;
+            $_SESSION['resource_link_id'] = $_POST['resource_link_id'] ?? null;
+
+            // Store custom parameters for lab matching (if configured in LMS)
+            $_SESSION['custom_lab_id'] = $_POST['custom_lab_id'] ?? null;
         }
     }
 } elseif (isset($_SESSION['lti_valid']) && $_SESSION['lti_valid']) {
@@ -212,6 +221,177 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userName = $_SESSION['lti_user_name'];
 } else {
     $error = 'Please launch this tool from your LMS';
+}
+
+/**
+ * Send grade back to LMS via LTI Outcomes Service
+ */
+function sendGradeToLMS($outcomeUrl, $sourcedId, $score, $consumerKey, $consumerSecret) {
+    // Score must be between 0.0 and 1.0
+    $score = max(0, min(1, floatval($score)));
+
+    // Build the XML payload (POX format)
+    $messageId = uniqid('msg_', true);
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
+    <imsx_POXHeader>
+        <imsx_POXRequestHeaderInfo>
+            <imsx_version>V1.0</imsx_version>
+            <imsx_messageIdentifier>' . $messageId . '</imsx_messageIdentifier>
+        </imsx_POXRequestHeaderInfo>
+    </imsx_POXHeader>
+    <imsx_POXBody>
+        <replaceResultRequest>
+            <resultRecord>
+                <sourcedGUID>
+                    <sourcedId>' . htmlspecialchars($sourcedId, ENT_XML1) . '</sourcedId>
+                </sourcedGUID>
+                <result>
+                    <resultScore>
+                        <language>en</language>
+                        <textString>' . number_format($score, 4) . '</textString>
+                    </resultScore>
+                </result>
+            </resultRecord>
+        </replaceResultRequest>
+    </imsx_POXBody>
+</imsx_POXEnvelopeRequest>';
+
+    // OAuth 1.0 parameters
+    $oauth = [
+        'oauth_consumer_key' => $consumerKey,
+        'oauth_nonce' => bin2hex(random_bytes(16)),
+        'oauth_signature_method' => 'HMAC-SHA1',
+        'oauth_timestamp' => (string)time(),
+        'oauth_version' => '1.0',
+        'oauth_body_hash' => base64_encode(sha1($xml, true))
+    ];
+
+    // Build signature base string
+    ksort($oauth);
+    $paramString = http_build_query($oauth, '', '&', PHP_QUERY_RFC3986);
+    $baseString = 'POST&' . rawurlencode($outcomeUrl) . '&' . rawurlencode($paramString);
+
+    // Generate signature
+    $key = rawurlencode($consumerSecret) . '&';
+    $oauth['oauth_signature'] = base64_encode(hash_hmac('sha1', $baseString, $key, true));
+
+    // Build Authorization header
+    $authParts = [];
+    foreach ($oauth as $k => $v) {
+        $authParts[] = $k . '="' . rawurlencode($v) . '"';
+    }
+    $authHeader = 'OAuth ' . implode(', ', $authParts);
+
+    // Send request
+    $ch = curl_init($outcomeUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $xml,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/xml',
+            'Authorization: ' . $authHeader
+        ],
+        CURLOPT_TIMEOUT => 30
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    // Check for success in response
+    $success = ($httpCode >= 200 && $httpCode < 300);
+    if ($success && $response) {
+        // Check XML response for success status
+        if (strpos($response, 'success') === false && strpos($response, 'Success') === false) {
+            $success = false;
+        }
+    }
+
+    return [
+        'success' => $success,
+        'httpCode' => $httpCode,
+        'response' => $response,
+        'error' => $curlError
+    ];
+}
+
+/**
+ * Find matching activity for the current LTI launch
+ */
+function findMatchingActivity($groupedActivities, $resourceLinkTitle, $customLabId = null) {
+    // If custom_lab_id is provided, match by activity ID containing it
+    if ($customLabId) {
+        foreach ($groupedActivities as $activityId => $activity) {
+            if (stripos($activityId, $customLabId) !== false) {
+                return ['id' => $activityId, 'activity' => $activity];
+            }
+        }
+    }
+
+    // Match by resource_link_title against activity name
+    if ($resourceLinkTitle) {
+        $titleLower = strtolower($resourceLinkTitle);
+        foreach ($groupedActivities as $activityId => $activity) {
+            $nameLower = strtolower($activity['name']);
+            // Check if title contains activity name or vice versa
+            if (stripos($nameLower, $titleLower) !== false ||
+                stripos($titleLower, $nameLower) !== false ||
+                similar_text($nameLower, $titleLower) > min(strlen($nameLower), strlen($titleLower)) * 0.6) {
+                return ['id' => $activityId, 'activity' => $activity];
+            }
+        }
+
+        // Try matching key parts of the title
+        $titleParts = preg_split('/[\s\-_:]+/', $titleLower);
+        foreach ($groupedActivities as $activityId => $activity) {
+            $nameLower = strtolower($activity['name']);
+            foreach ($titleParts as $part) {
+                if (strlen($part) > 3 && stripos($nameLower, $part) !== false) {
+                    return ['id' => $activityId, 'activity' => $activity];
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Calculate grade for an activity (0.0 to 1.0)
+ */
+function calculateActivityGrade($activity) {
+    // If activity has a score, use that
+    if ($activity['highestScore'] !== null) {
+        return $activity['highestScore'];
+    }
+
+    // If activity has children, calculate based on passed/total
+    if (!empty($activity['children'])) {
+        $passed = 0;
+        $total = count($activity['children']);
+        foreach ($activity['children'] as $child) {
+            if ($child['status'] === 'passed') {
+                $passed++;
+            }
+        }
+        return $total > 0 ? $passed / $total : 0;
+    }
+
+    // Based on status alone
+    switch ($activity['status']) {
+        case 'passed':
+        case 'mastered':
+            return 1.0;
+        case 'completed':
+            return 1.0;
+        case 'failed':
+            return 0.0;
+        default:
+            return 0.0;
+    }
 }
 
 /**
@@ -360,6 +540,10 @@ function updateActivityStats(&$activity, $statement) {
 
 // Fetch xAPI statements if we have a valid email
 $groupedActivities = [];
+$matchedActivity = null;
+$gradePassbackResult = null;
+$canPassbackGrade = false;
+
 if (!$error && $userEmail) {
     $result = getXapiStatements(
         $config['lrs_endpoint'],
@@ -372,6 +556,31 @@ if (!$error && $userEmail) {
         $error = 'Error fetching records: ' . $result['error'];
     } else {
         $groupedActivities = groupStatementsByActivity($statements);
+
+        // Check if grade passback is available
+        $canPassbackGrade = !empty($_SESSION['lis_outcome_service_url']) && !empty($_SESSION['lis_result_sourcedid']);
+
+        // Try to find matching activity for this LTI launch
+        if ($canPassbackGrade && !empty($groupedActivities)) {
+            $matchedActivity = findMatchingActivity(
+                $groupedActivities,
+                $_SESSION['resource_link_title'] ?? null,
+                $_SESSION['custom_lab_id'] ?? null
+            );
+        }
+
+        // Handle grade submission
+        if ($canPassbackGrade && isset($_POST['submit_grade']) && $matchedActivity) {
+            $grade = calculateActivityGrade($matchedActivity['activity']);
+            $gradePassbackResult = sendGradeToLMS(
+                $_SESSION['lis_outcome_service_url'],
+                $_SESSION['lis_result_sourcedid'],
+                $grade,
+                $config['lti_consumer_key'],
+                $config['lti_consumer_secret']
+            );
+            $gradePassbackResult['grade'] = $grade;
+        }
     }
 }
 ?>
@@ -560,6 +769,49 @@ if (!$error && $userEmail) {
             font-weight: 600;
             color: #495057;
         }
+        /* Grade passback styles */
+        .grade-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .grade-box.grade-success {
+            border-left-color: #28a745;
+            background: #f8fff8;
+        }
+        .grade-box.grade-error {
+            border-left-color: #dc3545;
+            background: #fff8f8;
+        }
+        .grade-box h5 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .grade-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .grade-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .matched-activity {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .no-match-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -583,6 +835,79 @@ if (!$error && $userEmail) {
                     <br><small>Course: <?= htmlspecialchars($_SESSION['lti_context_title']) ?></small>
                 <?php endif; ?>
             </div>
+
+            <!-- Grade Passback Section -->
+            <?php if ($canPassbackGrade): ?>
+                <?php if ($gradePassbackResult): ?>
+                    <!-- Show result of grade submission -->
+                    <div class="grade-box <?= $gradePassbackResult['success'] ? 'grade-success' : 'grade-error' ?>">
+                        <?php if ($gradePassbackResult['success']): ?>
+                            <h5>Grade Submitted Successfully!</h5>
+                            <p class="mb-0">
+                                Your grade of <strong><?= round($gradePassbackResult['grade'] * 100) ?>%</strong> has been sent to the gradebook.
+                            </p>
+                        <?php else: ?>
+                            <h5>Grade Submission Failed</h5>
+                            <p class="text-danger mb-0">
+                                There was an error submitting your grade. Please try again or contact your instructor.
+                            </p>
+                            <small class="text-muted">Error: <?= htmlspecialchars($gradePassbackResult['error'] ?: 'Unknown error') ?></small>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($matchedActivity): ?>
+                    <!-- Show grade submission form -->
+                    <div class="grade-box">
+                        <h5>Submit Grade to Gradebook</h5>
+                        <div class="matched-activity">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Matched Activity:</strong> <?= htmlspecialchars($matchedActivity['activity']['name']) ?>
+                                    <?php
+                                    $currentGrade = calculateActivityGrade($matchedActivity['activity']);
+                                    $childCount = count($matchedActivity['activity']['children']);
+                                    $passedCount = 0;
+                                    foreach ($matchedActivity['activity']['children'] as $child) {
+                                        if ($child['status'] === 'passed') $passedCount++;
+                                    }
+                                    ?>
+                                    <?php if ($childCount > 0): ?>
+                                        <br><small class="text-muted"><?= $passedCount ?>/<?= $childCount ?> tasks passed</small>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="text-end">
+                                    <div class="grade-display"><?= round($currentGrade * 100) ?>%</div>
+                                    <div class="grade-label">Current Grade</div>
+                                </div>
+                            </div>
+                        </div>
+                        <form method="POST" class="mt-3">
+                            <button type="submit" name="submit_grade" class="btn btn-success">
+                                Submit Grade to Gradebook
+                            </button>
+                            <small class="text-muted d-block mt-2">
+                                This will send your current grade (<?= round($currentGrade * 100) ?>%) to the Canvas gradebook.
+                            </small>
+                        </form>
+                    </div>
+                <?php else: ?>
+                    <!-- No matching activity found -->
+                    <div class="grade-box">
+                        <h5>Grade Submission Available</h5>
+                        <div class="no-match-warning">
+                            <strong>No Matching Activity Found</strong>
+                            <p class="mb-0 mt-2">
+                                Could not automatically match this assignment to a lab activity.
+                                <?php if (!empty($_SESSION['resource_link_title'])): ?>
+                                    <br><small>Assignment: "<?= htmlspecialchars($_SESSION['resource_link_title']) ?>"</small>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <small class="text-muted">
+                            Tip: Make sure the Canvas assignment name matches the lab name in xAPI, or configure a custom_lab_id parameter.
+                        </small>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
 
             <?php if (!$userEmail): ?>
                 <div class="alert alert-warning">
