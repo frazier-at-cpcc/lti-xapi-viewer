@@ -214,7 +214,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = 'Please launch this tool from your LMS';
 }
 
+/**
+ * Group statements by activity and calculate summary
+ */
+function groupStatementsByActivity($statements) {
+    $grouped = [];
+
+    foreach ($statements as $statement) {
+        $objectId = $statement['object']['id'] ?? 'unknown';
+        $objectName = getObjectName($statement['object']);
+        $verb = strtolower(getVerbName($statement['verb']));
+
+        if (!isset($grouped[$objectId])) {
+            $grouped[$objectId] = [
+                'name' => $objectName,
+                'object' => $statement['object'],
+                'highestScore' => null,
+                'bestAttempt' => null,
+                'status' => 'attempted', // attempted, passed, failed, completed
+                'attempts' => [],
+                'latestTimestamp' => $statement['timestamp']
+            ];
+        }
+
+        // Track all attempts
+        $grouped[$objectId]['attempts'][] = $statement;
+
+        // Update latest timestamp
+        if ($statement['timestamp'] > $grouped[$objectId]['latestTimestamp']) {
+            $grouped[$objectId]['latestTimestamp'] = $statement['timestamp'];
+        }
+
+        // Update status based on verb
+        if (in_array($verb, ['passed', 'mastered'])) {
+            $grouped[$objectId]['status'] = 'passed';
+        } elseif ($verb === 'failed' && $grouped[$objectId]['status'] !== 'passed') {
+            $grouped[$objectId]['status'] = 'failed';
+        } elseif (in_array($verb, ['completed', 'finished']) && !in_array($grouped[$objectId]['status'], ['passed', 'failed'])) {
+            $grouped[$objectId]['status'] = 'completed';
+        }
+
+        // Track highest score
+        if (isset($statement['result']['score']['scaled'])) {
+            $score = $statement['result']['score']['scaled'];
+            if ($grouped[$objectId]['highestScore'] === null || $score > $grouped[$objectId]['highestScore']) {
+                $grouped[$objectId]['highestScore'] = $score;
+                $grouped[$objectId]['bestAttempt'] = $statement;
+            }
+        }
+    }
+
+    // Sort by latest timestamp (most recent first)
+    uasort($grouped, function($a, $b) {
+        return strcmp($b['latestTimestamp'], $a['latestTimestamp']);
+    });
+
+    return $grouped;
+}
+
 // Fetch xAPI statements if we have a valid email
+$groupedActivities = [];
 if (!$error && $userEmail) {
     $result = getXapiStatements(
         $config['lrs_endpoint'],
@@ -225,6 +284,8 @@ if (!$error && $userEmail) {
     $statements = $result['statements'];
     if ($result['error']) {
         $error = 'Error fetching records: ' . $result['error'];
+    } else {
+        $groupedActivities = groupStatementsByActivity($statements);
     }
 }
 ?>
@@ -311,6 +372,66 @@ if (!$error && $userEmail) {
             padding: 30px;
             text-align: center;
         }
+        /* Summary card styles */
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #e2e3e5;
+        }
+        .summary-card.status-passed { border-left-color: #28a745; }
+        .summary-card.status-failed { border-left-color: #dc3545; }
+        .summary-card.status-completed { border-left-color: #17a2b8; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-passed { background-color: #d4edda; color: #155724; }
+        .status-failed { background-color: #f8d7da; color: #721c24; }
+        .status-completed { background-color: #d1ecf1; color: #0c5460; }
+        .status-attempted { background-color: #fff3cd; color: #856404; }
+        .best-score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .attempt-count {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .attempts-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .attempt-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .attempt-item:last-child {
+            border-bottom: none;
+        }
+        .attempt-score {
+            font-weight: 600;
+            color: #495057;
+        }
+        .verb-badge-small {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .toggle-attempts .hide-text { display: none; }
+        .toggle-attempts[aria-expanded="true"] .show-text { display: none; }
+        .toggle-attempts[aria-expanded="true"] .hide-text { display: inline; }
     </style>
 </head>
 <body>
@@ -340,7 +461,7 @@ if (!$error && $userEmail) {
                     <strong>Email Not Available</strong><br>
                     Your email address was not provided by the LMS. Please contact your instructor.
                 </div>
-            <?php elseif (empty($statements)): ?>
+            <?php elseif (empty($groupedActivities)): ?>
                 <div class="no-records">
                     <h3>No Learning Records Found</h3>
                     <p class="text-muted">
@@ -353,103 +474,131 @@ if (!$error && $userEmail) {
                 <div class="row mb-4">
                     <div class="col-md-4">
                         <div class="stats-card">
-                            <div class="stats-number"><?= count($statements) ?></div>
+                            <div class="stats-number"><?= count($groupedActivities) ?></div>
                             <div>Total Activities</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="stats-card">
                             <?php
-                            $completed = array_filter($statements, function($s) {
-                                $verb = strtolower(getVerbName($s['verb']));
-                                return in_array($verb, ['completed', 'passed', 'mastered']);
-                            });
+                            $passedCount = count(array_filter($groupedActivities, function($a) {
+                                return $a['status'] === 'passed';
+                            }));
                             ?>
-                            <div class="stats-number"><?= count($completed) ?></div>
-                            <div>Completed</div>
+                            <div class="stats-number"><?= $passedCount ?></div>
+                            <div>Passed</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="stats-card">
                             <?php
-                            $scores = [];
-                            foreach ($statements as $s) {
-                                if (isset($s['result']['score']['scaled'])) {
-                                    $scores[] = $s['result']['score']['scaled'] * 100;
-                                }
-                            }
-                            $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : '-';
+                            $scores = array_filter(array_column($groupedActivities, 'highestScore'), function($s) {
+                                return $s !== null;
+                            });
+                            $avgScore = count($scores) > 0 ? round((array_sum($scores) / count($scores)) * 100, 1) : '-';
                             ?>
                             <div class="stats-number"><?= $avgScore ?><?= $avgScore !== '-' ? '%' : '' ?></div>
-                            <div>Average Score</div>
+                            <div>Avg Best Score</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Records List -->
-                <h4 class="mb-3">Activity Timeline</h4>
-                <?php foreach ($statements as $statement): ?>
+                <!-- Activity Summary List -->
+                <h4 class="mb-3">Activity Summary</h4>
+                <?php $activityIndex = 0; foreach ($groupedActivities as $objectId => $activity): ?>
                     <?php
-                    $verb = getVerbName($statement['verb']);
-                    $verbLower = strtolower($verb);
-                    $verbClass = 'verb-default';
-                    if (in_array($verbLower, ['completed', 'finished', 'mastered'])) $verbClass = 'verb-completed';
-                    elseif (in_array($verbLower, ['attempted', 'started', 'launched', 'initialized'])) $verbClass = 'verb-attempted';
-                    elseif ($verbLower === 'passed') $verbClass = 'verb-passed';
-                    elseif ($verbLower === 'failed') $verbClass = 'verb-failed';
+                    $statusClass = 'status-attempted';
+                    $statusLabel = 'Attempted';
+                    if ($activity['status'] === 'passed') {
+                        $statusClass = 'status-passed';
+                        $statusLabel = 'Passed';
+                    } elseif ($activity['status'] === 'failed') {
+                        $statusClass = 'status-failed';
+                        $statusLabel = 'Failed';
+                    } elseif ($activity['status'] === 'completed') {
+                        $statusClass = 'status-completed';
+                        $statusLabel = 'Completed';
+                    }
+                    $hasMultipleAttempts = count($activity['attempts']) > 1;
                     ?>
-                    <div class="record-card">
+                    <div class="summary-card <?= $statusClass ?>">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="verb-badge <?= $verbClass ?>"><?= htmlspecialchars($verb) ?></span>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="status-badge <?= $statusClass ?>"><?= $statusLabel ?></span>
+                                    <span class="attempt-count"><?= count($activity['attempts']) ?> attempt<?= count($activity['attempts']) > 1 ? 's' : '' ?></span>
+                                </div>
                                 <h5 class="object-name mt-2 mb-1">
-                                    <?= htmlspecialchars(getObjectName($statement['object'])) ?>
+                                    <?= htmlspecialchars($activity['name']) ?>
                                 </h5>
                                 <div class="timestamp">
-                                    <?= formatTimestamp($statement['timestamp']) ?>
+                                    Last activity: <?= formatTimestamp($activity['latestTimestamp']) ?>
                                 </div>
                             </div>
-                            <?php if (isset($statement['result']['score'])): ?>
-                                <div class="text-end">
-                                    <?php if (isset($statement['result']['score']['scaled'])): ?>
-                                        <div class="score-display">
-                                            <?= round($statement['result']['score']['scaled'] * 100) ?>%
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (isset($statement['result']['score']['raw'])): ?>
-                                        <small class="text-muted">
-                                            <?= $statement['result']['score']['raw'] ?>
-                                            <?php if (isset($statement['result']['score']['max'])): ?>
-                                                / <?= $statement['result']['score']['max'] ?>
-                                            <?php endif; ?>
-                                        </small>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
+                            <div class="text-end">
+                                <?php if ($activity['highestScore'] !== null): ?>
+                                    <div class="best-score">
+                                        <?= round($activity['highestScore'] * 100) ?>%
+                                    </div>
+                                    <small class="text-muted">Best Score</small>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
-                        <?php if (isset($statement['result']['duration'])): ?>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    Duration: <?= htmlspecialchars($statement['result']['duration']) ?>
-                                </small>
+                        <!-- Expandable attempts section -->
+                        <?php if ($hasMultipleAttempts): ?>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-secondary toggle-attempts" type="button" data-bs-toggle="collapse" data-bs-target="#attempts-<?= $activityIndex ?>" aria-expanded="false">
+                                    <span class="show-text">Show All Attempts</span>
+                                    <span class="hide-text" style="display:none;">Hide Attempts</span>
+                                </button>
                             </div>
-                        <?php endif; ?>
-
-                        <?php if (isset($statement['context']['contextActivities']['grouping'])): ?>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <?php
-                                    $grouping = $statement['context']['contextActivities']['grouping'][0] ?? null;
-                                    if ($grouping) {
-                                        echo 'Course: ' . htmlspecialchars(getObjectName($grouping));
-                                    }
-                                    ?>
-                                </small>
+                            <div class="collapse" id="attempts-<?= $activityIndex ?>">
+                                <div class="attempts-list mt-3">
+                                    <?php foreach ($activity['attempts'] as $attempt): ?>
+                                        <?php
+                                        $verb = getVerbName($attempt['verb']);
+                                        $verbLower = strtolower($verb);
+                                        $verbClass = 'verb-default';
+                                        if (in_array($verbLower, ['completed', 'finished', 'mastered'])) $verbClass = 'verb-completed';
+                                        elseif (in_array($verbLower, ['attempted', 'started', 'launched', 'initialized'])) $verbClass = 'verb-attempted';
+                                        elseif ($verbLower === 'passed') $verbClass = 'verb-passed';
+                                        elseif ($verbLower === 'failed') $verbClass = 'verb-failed';
+                                        ?>
+                                        <div class="attempt-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="verb-badge-small <?= $verbClass ?>"><?= htmlspecialchars($verb) ?></span>
+                                                    <span class="timestamp ms-2"><?= formatTimestamp($attempt['timestamp']) ?></span>
+                                                </div>
+                                                <?php if (isset($attempt['result']['score']['scaled'])): ?>
+                                                    <div class="attempt-score">
+                                                        <?= round($attempt['result']['score']['scaled'] * 100) ?>%
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <!-- Single attempt - show inline -->
+                            <?php $attempt = $activity['attempts'][0]; ?>
+                            <div class="single-attempt mt-2">
+                                <?php
+                                $verb = getVerbName($attempt['verb']);
+                                $verbLower = strtolower($verb);
+                                $verbClass = 'verb-default';
+                                if (in_array($verbLower, ['completed', 'finished', 'mastered'])) $verbClass = 'verb-completed';
+                                elseif (in_array($verbLower, ['attempted', 'started', 'launched', 'initialized'])) $verbClass = 'verb-attempted';
+                                elseif ($verbLower === 'passed') $verbClass = 'verb-passed';
+                                elseif ($verbLower === 'failed') $verbClass = 'verb-failed';
+                                ?>
+                                <span class="verb-badge-small <?= $verbClass ?>"><?= htmlspecialchars($verb) ?></span>
                             </div>
                         <?php endif; ?>
                     </div>
-                <?php endforeach; ?>
+                <?php $activityIndex++; endforeach; ?>
             <?php endif; ?>
 
             <div class="text-center mt-4">
