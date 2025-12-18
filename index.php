@@ -44,10 +44,22 @@ function verifyLTISignature($consumerKey, $consumerSecret) {
     // Build base string for signature verification
     $method = 'POST';
 
-    // Reconstruct the URL
-    $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    // Reconstruct the URL (handle reverse proxies and different LMS configurations)
+    $scheme = 'http';
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        $scheme = 'https';
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+        $scheme = 'https';
+    }
+
     $host = $_SERVER['HTTP_HOST'];
-    $path = $_SERVER['REQUEST_URI'];
+    // Remove port from host if it's the default for the scheme
+    $host = preg_replace('/:443$/', '', $host);
+    $host = preg_replace('/:80$/', '', $host);
+
+    $path = strtok($_SERVER['REQUEST_URI'], '?'); // Remove query string if present
     $url = "$scheme://$host$path";
 
     // Get all POST parameters except oauth_signature
@@ -74,13 +86,30 @@ function verifyLTISignature($consumerKey, $consumerSecret) {
 
     // Compare signatures
     if ($signature !== $expectedSignature) {
-        // Try URL variations (http vs https, with/without port)
+        // Try URL variations for different LMS platforms (Brightspace, Moodle, Canvas)
+        // Different LMS may construct URLs differently (scheme, port, trailing slash)
         $urlVariations = [
             $url,
             str_replace('https://', 'http://', $url),
             str_replace('http://', 'https://', $url),
+            rtrim($url, '/'),
+            rtrim($url, '/') . '/',
             preg_replace('/:8888/', '', $url),
+            preg_replace('/:8080/', '', $url),
+            preg_replace('/:443/', '', $url),
+            preg_replace('/:80/', '', $url),
         ];
+
+        // Also try with/without index.php
+        $additionalVariations = [];
+        foreach ($urlVariations as $v) {
+            $additionalVariations[] = str_replace('/index.php', '/', $v);
+            $additionalVariations[] = str_replace('/index.php', '', $v);
+            if (strpos($v, 'index.php') === false) {
+                $additionalVariations[] = rtrim($v, '/') . '/index.php';
+            }
+        }
+        $urlVariations = array_unique(array_merge($urlVariations, $additionalVariations));
 
         $valid = false;
         foreach ($urlVariations as $testUrl) {
@@ -218,9 +247,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['resource_link_title'] = $_POST['resource_link_title'] ?? null;
             $_SESSION['resource_link_id'] = $_POST['resource_link_id'] ?? null;
 
-            // Store custom parameters for lab matching (if configured in LMS)
+            // Store custom parameters for lab matching (works across all LMS platforms)
+            // custom_lab_id can be set in any LMS as a custom parameter
             $_SESSION['custom_lab_id'] = $_POST['custom_lab_id'] ?? null;
-            $_SESSION['custom_canvas_assignment_title'] = $_POST['custom_canvas_assignment_title'] ?? null;
+
+            // Try multiple sources for assignment/activity title (cross-platform)
+            // Standard LTI: resource_link_title
+            // Canvas: custom_canvas_assignment_title
+            // Brightspace: custom parameters or resource_link_title
+            // Moodle: resource_link_title
+            $_SESSION['activity_title'] = $_POST['resource_link_title']
+                ?? $_POST['custom_canvas_assignment_title']
+                ?? $_POST['custom_activity_title']
+                ?? null;
         }
     }
 } elseif (isset($_SESSION['lti_valid']) && $_SESSION['lti_valid']) {
@@ -570,11 +609,10 @@ if (!$error && $userEmail) {
 
         // Try to find matching activity for this LTI launch
         if ($canPassbackGrade && !empty($groupedActivities)) {
-            // Use Canvas assignment title if available, otherwise fall back to resource_link_title
-            $titleToMatch = $_SESSION['custom_canvas_assignment_title'] ?? $_SESSION['resource_link_title'] ?? null;
+            // Use activity_title (works across Canvas, Brightspace, Moodle)
             $matchedActivity = findMatchingActivity(
                 $groupedActivities,
-                $titleToMatch,
+                $_SESSION['activity_title'] ?? null,
                 $_SESSION['custom_lab_id'] ?? null
             );
         }

@@ -10,29 +10,36 @@
     http://www.imsglobal.org/xsd/imslticp_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imslticp_v1p0.xsd">
 
     <blti:title>xAPI Learning Records Viewer</blti:title>
-    <blti:description>View your xAPI learning activity records. Track your progress and verify that activities are being captured for grading.</blti:description>
+    <blti:description>View your xAPI learning activity records. Track your progress and verify that activities are being captured for grading. Supports grade passback to LMS gradebook.</blti:description>
 
-    <!-- UPDATE THIS URL to match your server -->
     <blti:launch_url>https://lti.labsconnect.org/</blti:launch_url>
 
-    <!-- Enable grade passback -->
+    <!-- Vendor information -->
+    <blti:vendor>
+        <lticp:code>labsconnect</lticp:code>
+        <lticp:name>LabsConnect</lticp:name>
+        <lticp:description>xAPI Learning Records Viewer with LTI Grade Passback</lticp:description>
+    </blti:vendor>
+
+    <!-- Canvas-specific extensions -->
     <blti:extensions platform="canvas.instructure.com">
         <lticm:property name="tool_id">xapi_records_viewer</lticm:property>
         <lticm:property name="privacy_level">public</lticm:property>
         <lticm:property name="domain">lti.labsconnect.org</lticm:property>
-
-        <!-- Course navigation (view all records) -->
         <lticm:options name="course_navigation">
             <lticm:property name="enabled">true</lticm:property>
             <lticm:property name="text">My Learning Records</lticm:property>
             <lticm:property name="visibility">members</lticm:property>
         </lticm:options>
-
     </blti:extensions>
 
-    <!-- Custom parameters for matching assignments to labs -->
+    <!--
+    Custom parameter for lab matching (optional).
+    Set custom_lab_id in your LMS to match the xAPI activity ID.
+    Example: custom_lab_id=files-review
+    -->
     <blti:custom>
-        <lticm:property name="canvas_assignment_title">$Canvas.assignment.title</lticm:property>
+        <lticm:property name="lab_id"></lticm:property>
     </blti:custom>
 
     <cartridge_bundle identifierref="BLTI001_Bundle"/>
