@@ -13,7 +13,7 @@
     <blti:description>View your xAPI learning activity records. Track your progress and verify that activities are being captured for grading.</blti:description>
 
     <!-- UPDATE THIS URL to match your server -->
-    <blti:launch_url>http://YOUR_SERVER_ADDRESS:8888/</blti:launch_url>
+    <blti:launch_url>https://lti.labsconnect.org/</blti:launch_url>
 
     <blti:extensions platform="canvas.instructure.com">
         <lticm:property name="tool_id">xapi_records_viewer</lticm:property>
