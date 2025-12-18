@@ -1104,14 +1104,6 @@ if (!$error && $userEmail) {
                 <?php $activityIndex++; endforeach; ?>
             <?php endif; ?>
 
-            <div class="text-center mt-4">
-                <form method="POST" style="display: inline;">
-                    <input type="hidden" name="refresh" value="1">
-                    <button type="submit" class="btn btn-primary">
-                        Refresh Records
-                    </button>
-                </form>
-            </div>
         <?php endif; ?>
     </div>
 
