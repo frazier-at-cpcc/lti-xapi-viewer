@@ -215,61 +215,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /**
- * Group statements by activity and calculate summary
+ * Get parent activity ID from statement context
+ */
+function getParentActivityId($statement) {
+    // Check for parent in contextActivities
+    if (isset($statement['context']['contextActivities']['parent'][0]['id'])) {
+        return $statement['context']['contextActivities']['parent'][0]['id'];
+    }
+    // Check for grouping as fallback
+    if (isset($statement['context']['contextActivities']['grouping'][0]['id'])) {
+        return $statement['context']['contextActivities']['grouping'][0]['id'];
+    }
+    return null;
+}
+
+/**
+ * Group statements by parent activity with children nested
  */
 function groupStatementsByActivity($statements) {
-    $grouped = [];
+    $parents = [];
+    $children = [];
+    $parentIds = [];
 
+    // First pass: identify all parent IDs
+    foreach ($statements as $statement) {
+        $parentId = getParentActivityId($statement);
+        if ($parentId) {
+            $parentIds[$parentId] = true;
+        }
+    }
+
+    // Second pass: categorize statements as parents or children
     foreach ($statements as $statement) {
         $objectId = $statement['object']['id'] ?? 'unknown';
-        $objectName = getObjectName($statement['object']);
-        $verb = strtolower(getVerbName($statement['verb']));
+        $parentId = getParentActivityId($statement);
 
-        if (!isset($grouped[$objectId])) {
-            $grouped[$objectId] = [
-                'name' => $objectName,
-                'object' => $statement['object'],
-                'highestScore' => null,
-                'bestAttempt' => null,
-                'status' => 'attempted', // attempted, passed, failed, completed
-                'attempts' => [],
-                'latestTimestamp' => $statement['timestamp']
-            ];
+        // If this statement's object is referenced as a parent by others, or has no parent itself, it's a parent
+        if (isset($parentIds[$objectId]) || $parentId === null) {
+            if (!isset($parents[$objectId])) {
+                $parents[$objectId] = [
+                    'name' => getObjectName($statement['object']),
+                    'object' => $statement['object'],
+                    'highestScore' => null,
+                    'bestAttempt' => null,
+                    'status' => 'attempted',
+                    'attempts' => [],
+                    'children' => [],
+                    'latestTimestamp' => $statement['timestamp']
+                ];
+            }
+            $parents[$objectId]['attempts'][] = $statement;
+            updateActivityStats($parents[$objectId], $statement);
+        } else {
+            // This is a child statement
+            if (!isset($children[$parentId])) {
+                $children[$parentId] = [];
+            }
+            if (!isset($children[$parentId][$objectId])) {
+                $children[$parentId][$objectId] = [
+                    'name' => getObjectName($statement['object']),
+                    'object' => $statement['object'],
+                    'highestScore' => null,
+                    'bestAttempt' => null,
+                    'status' => 'attempted',
+                    'attempts' => [],
+                    'latestTimestamp' => $statement['timestamp']
+                ];
+            }
+            $children[$parentId][$objectId]['attempts'][] = $statement;
+            updateActivityStats($children[$parentId][$objectId], $statement);
         }
+    }
 
-        // Track all attempts
-        $grouped[$objectId]['attempts'][] = $statement;
-
-        // Update latest timestamp
-        if ($statement['timestamp'] > $grouped[$objectId]['latestTimestamp']) {
-            $grouped[$objectId]['latestTimestamp'] = $statement['timestamp'];
-        }
-
-        // Update status based on verb
-        if (in_array($verb, ['passed', 'mastered'])) {
-            $grouped[$objectId]['status'] = 'passed';
-        } elseif ($verb === 'failed' && $grouped[$objectId]['status'] !== 'passed') {
-            $grouped[$objectId]['status'] = 'failed';
-        } elseif (in_array($verb, ['completed', 'finished']) && !in_array($grouped[$objectId]['status'], ['passed', 'failed'])) {
-            $grouped[$objectId]['status'] = 'completed';
-        }
-
-        // Track highest score
-        if (isset($statement['result']['score']['scaled'])) {
-            $score = $statement['result']['score']['scaled'];
-            if ($grouped[$objectId]['highestScore'] === null || $score > $grouped[$objectId]['highestScore']) {
-                $grouped[$objectId]['highestScore'] = $score;
-                $grouped[$objectId]['bestAttempt'] = $statement;
+    // Attach children to parents
+    foreach ($children as $parentId => $childActivities) {
+        if (isset($parents[$parentId])) {
+            $parents[$parentId]['children'] = $childActivities;
+            // Update parent status based on children
+            $allPassed = true;
+            $anyFailed = false;
+            foreach ($childActivities as $child) {
+                if ($child['status'] === 'failed') {
+                    $anyFailed = true;
+                    $allPassed = false;
+                } elseif ($child['status'] !== 'passed') {
+                    $allPassed = false;
+                }
+            }
+            // Only override if parent doesn't have its own definitive status
+            if (!empty($childActivities)) {
+                if ($allPassed && count($childActivities) > 0) {
+                    $parents[$parentId]['status'] = 'passed';
+                } elseif ($anyFailed) {
+                    $parents[$parentId]['status'] = 'failed';
+                }
+            }
+        } else {
+            // Parent doesn't exist in statements, create a placeholder
+            // This shouldn't happen normally, but handle it gracefully
+            foreach ($childActivities as $childId => $child) {
+                $parents[$childId] = $child;
+                $parents[$childId]['children'] = [];
             }
         }
     }
 
     // Sort by latest timestamp (most recent first)
-    uasort($grouped, function($a, $b) {
+    uasort($parents, function($a, $b) {
         return strcmp($b['latestTimestamp'], $a['latestTimestamp']);
     });
 
-    return $grouped;
+    return $parents;
+}
+
+/**
+ * Update activity statistics from a statement
+ */
+function updateActivityStats(&$activity, $statement) {
+    $verb = strtolower(getVerbName($statement['verb']));
+
+    // Update latest timestamp
+    if ($statement['timestamp'] > $activity['latestTimestamp']) {
+        $activity['latestTimestamp'] = $statement['timestamp'];
+    }
+
+    // Update status based on verb
+    if (in_array($verb, ['passed', 'mastered'])) {
+        $activity['status'] = 'passed';
+    } elseif ($verb === 'failed' && $activity['status'] !== 'passed') {
+        $activity['status'] = 'failed';
+    } elseif (in_array($verb, ['completed', 'finished']) && !in_array($activity['status'], ['passed', 'failed'])) {
+        $activity['status'] = 'completed';
+    }
+
+    // Track highest score
+    if (isset($statement['result']['score']['scaled'])) {
+        $score = $statement['result']['score']['scaled'];
+        if ($activity['highestScore'] === null || $score > $activity['highestScore']) {
+            $activity['highestScore'] = $score;
+            $activity['bestAttempt'] = $statement;
+        }
+    }
 }
 
 // Fetch xAPI statements if we have a valid email
@@ -432,6 +518,48 @@ if (!$error && $userEmail) {
         .toggle-attempts .hide-text { display: none; }
         .toggle-attempts[aria-expanded="true"] .show-text { display: none; }
         .toggle-attempts[aria-expanded="true"] .hide-text { display: inline; }
+        /* Children/task styles */
+        .task-count {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .children-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .child-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+            border-left: 3px solid #e2e3e5;
+            background: white;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        .child-item:last-child {
+            margin-bottom: 0;
+        }
+        .child-item.status-passed { border-left-color: #28a745; }
+        .child-item.status-failed { border-left-color: #dc3545; }
+        .child-item.status-completed { border-left-color: #17a2b8; }
+        .child-status-icon {
+            font-weight: bold;
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .child-status-icon.status-passed { color: #28a745; }
+        .child-status-icon.status-failed { color: #dc3545; }
+        .child-status-icon.status-completed { color: #17a2b8; }
+        .child-status-icon.status-attempted { color: #856404; }
+        .child-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .child-score {
+            font-weight: 600;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -519,14 +647,23 @@ if (!$error && $userEmail) {
                         $statusClass = 'status-completed';
                         $statusLabel = 'Completed';
                     }
-                    $hasMultipleAttempts = count($activity['attempts']) > 1;
+                    $hasChildren = !empty($activity['children']);
+                    $childCount = count($activity['children']);
+                    $passedChildren = 0;
+                    $failedChildren = 0;
+                    foreach ($activity['children'] as $child) {
+                        if ($child['status'] === 'passed') $passedChildren++;
+                        elseif ($child['status'] === 'failed') $failedChildren++;
+                    }
                     ?>
                     <div class="summary-card <?= $statusClass ?>">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="status-badge <?= $statusClass ?>"><?= $statusLabel ?></span>
-                                    <span class="attempt-count"><?= count($activity['attempts']) ?> attempt<?= count($activity['attempts']) > 1 ? 's' : '' ?></span>
+                                    <?php if ($hasChildren): ?>
+                                        <span class="task-count"><?= $passedChildren ?>/<?= $childCount ?> tasks passed</span>
+                                    <?php endif; ?>
                                 </div>
                                 <h5 class="object-name mt-2 mb-1">
                                     <?= htmlspecialchars($activity['name']) ?>
@@ -545,56 +682,46 @@ if (!$error && $userEmail) {
                             </div>
                         </div>
 
-                        <!-- Expandable attempts section -->
-                        <?php if ($hasMultipleAttempts): ?>
+                        <!-- Nested children tasks -->
+                        <?php if ($hasChildren): ?>
                             <div class="mt-3">
-                                <button class="btn btn-sm btn-outline-secondary toggle-attempts" type="button" data-bs-toggle="collapse" data-bs-target="#attempts-<?= $activityIndex ?>" aria-expanded="false">
-                                    <span class="show-text">Show All Attempts</span>
-                                    <span class="hide-text" style="display:none;">Hide Attempts</span>
+                                <button class="btn btn-sm btn-outline-secondary toggle-attempts" type="button" data-bs-toggle="collapse" data-bs-target="#children-<?= $activityIndex ?>" aria-expanded="false">
+                                    <span class="show-text">Show Tasks (<?= $childCount ?>)</span>
+                                    <span class="hide-text" style="display:none;">Hide Tasks</span>
                                 </button>
                             </div>
-                            <div class="collapse" id="attempts-<?= $activityIndex ?>">
-                                <div class="attempts-list mt-3">
-                                    <?php foreach ($activity['attempts'] as $attempt): ?>
+                            <div class="collapse" id="children-<?= $activityIndex ?>">
+                                <div class="children-list mt-3">
+                                    <?php foreach ($activity['children'] as $childId => $child): ?>
                                         <?php
-                                        $verb = getVerbName($attempt['verb']);
-                                        $verbLower = strtolower($verb);
-                                        $verbClass = 'verb-default';
-                                        if (in_array($verbLower, ['completed', 'finished', 'mastered'])) $verbClass = 'verb-completed';
-                                        elseif (in_array($verbLower, ['attempted', 'started', 'launched', 'initialized'])) $verbClass = 'verb-attempted';
-                                        elseif ($verbLower === 'passed') $verbClass = 'verb-passed';
-                                        elseif ($verbLower === 'failed') $verbClass = 'verb-failed';
+                                        $childStatusClass = 'status-attempted';
+                                        if ($child['status'] === 'passed') $childStatusClass = 'status-passed';
+                                        elseif ($child['status'] === 'failed') $childStatusClass = 'status-failed';
+                                        elseif ($child['status'] === 'completed') $childStatusClass = 'status-completed';
                                         ?>
-                                        <div class="attempt-item">
+                                        <div class="child-item <?= $childStatusClass ?>">
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <span class="verb-badge-small <?= $verbClass ?>"><?= htmlspecialchars($verb) ?></span>
-                                                    <span class="timestamp ms-2"><?= formatTimestamp($attempt['timestamp']) ?></span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="child-status-icon <?= $childStatusClass ?>">
+                                                        <?php if ($child['status'] === 'passed'): ?>
+                                                            &#10003;
+                                                        <?php elseif ($child['status'] === 'failed'): ?>
+                                                            &#10007;
+                                                        <?php else: ?>
+                                                            &#9679;
+                                                        <?php endif; ?>
+                                                    </span>
+                                                    <span class="child-name"><?= htmlspecialchars($child['name']) ?></span>
                                                 </div>
-                                                <?php if (isset($attempt['result']['score']['scaled'])): ?>
-                                                    <div class="attempt-score">
-                                                        <?= round($attempt['result']['score']['scaled'] * 100) ?>%
+                                                <?php if ($child['highestScore'] !== null): ?>
+                                                    <div class="child-score">
+                                                        <?= round($child['highestScore'] * 100) ?>%
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                            </div>
-                        <?php else: ?>
-                            <!-- Single attempt - show inline -->
-                            <?php $attempt = $activity['attempts'][0]; ?>
-                            <div class="single-attempt mt-2">
-                                <?php
-                                $verb = getVerbName($attempt['verb']);
-                                $verbLower = strtolower($verb);
-                                $verbClass = 'verb-default';
-                                if (in_array($verbLower, ['completed', 'finished', 'mastered'])) $verbClass = 'verb-completed';
-                                elseif (in_array($verbLower, ['attempted', 'started', 'launched', 'initialized'])) $verbClass = 'verb-attempted';
-                                elseif ($verbLower === 'passed') $verbClass = 'verb-passed';
-                                elseif ($verbLower === 'failed') $verbClass = 'verb-failed';
-                                ?>
-                                <span class="verb-badge-small <?= $verbClass ?>"><?= htmlspecialchars($verb) ?></span>
                             </div>
                         <?php endif; ?>
                     </div>
