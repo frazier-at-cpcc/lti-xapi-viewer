@@ -7,6 +7,22 @@
  * and records are fetched from SQL LRS filtered by actor mbox (mailto:email).
  */
 
+// Configure session cookie for iframe/cross-origin LTI usage
+// SameSite=None is required for third-party cookie access in iframes
+if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => true,      // Required for SameSite=None
+        'httponly' => true,
+        'samesite' => 'None'   // Allow cross-site cookie for LTI iframe
+    ]);
+} else {
+    // Fallback for older PHP versions
+    session_set_cookie_params(0, '/; SameSite=None; Secure', '', true, true);
+}
+
 session_start();
 
 // Configuration - load from environment or use defaults
@@ -212,54 +228,65 @@ $userName = null;
 $statements = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify LTI message type - accept multiple valid types
-    $validMessageTypes = [
-        'basic-lti-launch-request',
-        'ContentItemSelectionRequest',
-        'ContentItemSelection'
-    ];
-    $messageType = $_POST['lti_message_type'] ?? '';
-
-    if (!in_array($messageType, $validMessageTypes)) {
-        $error = 'Invalid LTI message type: ' . htmlspecialchars($messageType);
-    } else {
-        // Verify OAuth signature
-        $verification = verifyLTISignature($config['lti_consumer_key'], $config['lti_consumer_secret']);
-
-        if (!$verification['valid']) {
-            $error = 'LTI Authentication Failed: ' . $verification['error'];
+    // Check if this is a refresh or grade submit (not a new LTI launch)
+    if (isset($_POST['refresh']) || isset($_POST['submit_grade'])) {
+        // Use existing session data
+        if (isset($_SESSION['lti_valid']) && $_SESSION['lti_valid']) {
+            $userEmail = $_SESSION['lti_user_email'];
+            $userName = $_SESSION['lti_user_name'];
         } else {
-            // Extract user information
-            $userEmail = $_POST['lis_person_contact_email_primary'] ?? null;
-            $userName = $_POST['lis_person_name_full'] ??
-                       (($_POST['lis_person_name_given'] ?? '') . ' ' . ($_POST['lis_person_name_family'] ?? '')) ?:
-                       'Student';
+            $error = 'Session expired. Please relaunch from your LMS.';
+        }
+    } else {
+        // This is an LTI launch - verify LTI message type
+        $validMessageTypes = [
+            'basic-lti-launch-request',
+            'ContentItemSelectionRequest',
+            'ContentItemSelection'
+        ];
+        $messageType = $_POST['lti_message_type'] ?? '';
 
-            // Store in session for refresh
-            $_SESSION['lti_user_email'] = $userEmail;
-            $_SESSION['lti_user_name'] = trim($userName);
-            $_SESSION['lti_context_title'] = $_POST['context_title'] ?? 'Course';
-            $_SESSION['lti_valid'] = true;
+        if (!in_array($messageType, $validMessageTypes)) {
+            $error = 'Invalid LTI message type: ' . htmlspecialchars($messageType);
+        } else {
+            // Verify OAuth signature
+            $verification = verifyLTISignature($config['lti_consumer_key'], $config['lti_consumer_secret']);
 
-            // Store LTI Outcomes parameters for grade passback
-            $_SESSION['lis_outcome_service_url'] = $_POST['lis_outcome_service_url'] ?? null;
-            $_SESSION['lis_result_sourcedid'] = $_POST['lis_result_sourcedid'] ?? null;
-            $_SESSION['resource_link_title'] = $_POST['resource_link_title'] ?? null;
-            $_SESSION['resource_link_id'] = $_POST['resource_link_id'] ?? null;
+            if (!$verification['valid']) {
+                $error = 'LTI Authentication Failed: ' . $verification['error'];
+            } else {
+                // Extract user information
+                $userEmail = $_POST['lis_person_contact_email_primary'] ?? null;
+                $userName = $_POST['lis_person_name_full'] ??
+                           (($_POST['lis_person_name_given'] ?? '') . ' ' . ($_POST['lis_person_name_family'] ?? '')) ?:
+                           'Student';
 
-            // Store custom parameters for lab matching (works across all LMS platforms)
-            // custom_lab_id can be set in any LMS as a custom parameter
-            $_SESSION['custom_lab_id'] = $_POST['custom_lab_id'] ?? null;
+                // Store in session for refresh
+                $_SESSION['lti_user_email'] = $userEmail;
+                $_SESSION['lti_user_name'] = trim($userName);
+                $_SESSION['lti_context_title'] = $_POST['context_title'] ?? 'Course';
+                $_SESSION['lti_valid'] = true;
 
-            // Try multiple sources for assignment/activity title (cross-platform)
-            // Standard LTI: resource_link_title
-            // Canvas: custom_canvas_assignment_title
-            // Brightspace: custom parameters or resource_link_title
-            // Moodle: resource_link_title
-            $_SESSION['activity_title'] = $_POST['resource_link_title']
-                ?? $_POST['custom_canvas_assignment_title']
-                ?? $_POST['custom_activity_title']
-                ?? null;
+                // Store LTI Outcomes parameters for grade passback
+                $_SESSION['lis_outcome_service_url'] = $_POST['lis_outcome_service_url'] ?? null;
+                $_SESSION['lis_result_sourcedid'] = $_POST['lis_result_sourcedid'] ?? null;
+                $_SESSION['resource_link_title'] = $_POST['resource_link_title'] ?? null;
+                $_SESSION['resource_link_id'] = $_POST['resource_link_id'] ?? null;
+
+                // Store custom parameters for lab matching (works across all LMS platforms)
+                // custom_lab_id can be set in any LMS as a custom parameter
+                $_SESSION['custom_lab_id'] = $_POST['custom_lab_id'] ?? null;
+
+                // Try multiple sources for assignment/activity title (cross-platform)
+                // Standard LTI: resource_link_title
+                // Canvas: custom_canvas_assignment_title
+                // Brightspace: custom parameters or resource_link_title
+                // Moodle: resource_link_title
+                $_SESSION['activity_title'] = $_POST['resource_link_title']
+                    ?? $_POST['custom_canvas_assignment_title']
+                    ?? $_POST['custom_activity_title']
+                    ?? null;
+            }
         }
     }
 } elseif (isset($_SESSION['lti_valid']) && $_SESSION['lti_valid']) {
@@ -1102,9 +1129,12 @@ if (!$error && $userEmail) {
             <?php endif; ?>
 
             <div class="text-center mt-4">
-                <button class="btn btn-primary" onclick="location.reload()">
-                    Refresh Records
-                </button>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="refresh" value="1">
+                    <button type="submit" class="btn btn-primary">
+                        Refresh Records
+                    </button>
+                </form>
             </div>
         <?php endif; ?>
     </div>
