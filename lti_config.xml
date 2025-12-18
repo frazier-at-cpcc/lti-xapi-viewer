@@ -28,18 +28,10 @@
             <lticm:property name="visibility">members</lticm:property>
         </lticm:options>
 
-        <!-- Assignment selection (for grade passback) -->
-        <lticm:options name="assignment_selection">
-            <lticm:property name="enabled">true</lticm:property>
-            <lticm:property name="text">xAPI Lab Grade</lticm:property>
-            <lticm:property name="selection_width">800</lticm:property>
-            <lticm:property name="selection_height">600</lticm:property>
-        </lticm:options>
     </blti:extensions>
 
-    <!-- Declare that this tool accepts grades -->
+    <!-- Custom parameters for matching assignments to labs -->
     <blti:custom>
-        <lticm:property name="canvas_assignment_id">$Canvas.assignment.id</lticm:property>
         <lticm:property name="canvas_assignment_title">$Canvas.assignment.title</lticm:property>
     </blti:custom>
 
