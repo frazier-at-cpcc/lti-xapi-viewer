@@ -183,9 +183,16 @@ $userName = null;
 $statements = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify LTI message type
-    if (!isset($_POST['lti_message_type']) || $_POST['lti_message_type'] !== 'basic-lti-launch-request') {
-        $error = 'Invalid LTI message type';
+    // Verify LTI message type - accept multiple valid types
+    $validMessageTypes = [
+        'basic-lti-launch-request',
+        'ContentItemSelectionRequest',
+        'ContentItemSelection'
+    ];
+    $messageType = $_POST['lti_message_type'] ?? '';
+
+    if (!in_array($messageType, $validMessageTypes)) {
+        $error = 'Invalid LTI message type: ' . htmlspecialchars($messageType);
     } else {
         // Verify OAuth signature
         $verification = verifyLTISignature($config['lti_consumer_key'], $config['lti_consumer_secret']);

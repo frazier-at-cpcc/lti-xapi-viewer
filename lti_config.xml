@@ -32,13 +32,8 @@
         <lticm:options name="assignment_selection">
             <lticm:property name="enabled">true</lticm:property>
             <lticm:property name="text">xAPI Lab Grade</lticm:property>
-            <lticm:property name="message_type">ContentItemSelectionRequest</lticm:property>
-        </lticm:options>
-
-        <!-- Homework submission (external tool assignment) -->
-        <lticm:options name="homework_submission">
-            <lticm:property name="enabled">true</lticm:property>
-            <lticm:property name="text">Submit Lab Grade</lticm:property>
+            <lticm:property name="selection_width">800</lticm:property>
+            <lticm:property name="selection_height">600</lticm:property>
         </lticm:options>
     </blti:extensions>
 
