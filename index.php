@@ -644,8 +644,8 @@ if (!$error && $userEmail) {
             );
         }
 
-        // Handle grade submission
-        if ($canPassbackGrade && isset($_POST['submit_grade']) && $matchedActivity) {
+        // Automatically submit grade on page load if conditions are met
+        if ($canPassbackGrade && $matchedActivity) {
             $grade = calculateActivityGrade($matchedActivity['activity']);
             $gradePassbackResult = sendGradeToLMS(
                 $_SESSION['lis_outcome_service_url'],
@@ -914,55 +914,31 @@ if (!$error && $userEmail) {
             <!-- Grade Passback Section -->
             <?php if ($canPassbackGrade): ?>
                 <?php if ($gradePassbackResult): ?>
-                    <!-- Show result of grade submission -->
+                    <!-- Show result of automatic grade submission -->
                     <div class="grade-box <?= $gradePassbackResult['success'] ? 'grade-success' : 'grade-error' ?>">
                         <?php if ($gradePassbackResult['success']): ?>
-                            <h5>Grade Submitted Successfully!</h5>
-                            <p class="mb-0">
-                                Your grade of <strong><?= round($gradePassbackResult['grade'] * 100) ?>%</strong> has been sent to the gradebook.
-                            </p>
-                        <?php else: ?>
-                            <h5>Grade Submission Failed</h5>
-                            <p class="text-danger mb-0">
-                                There was an error submitting your grade. Please try again or contact your instructor.
-                            </p>
-                            <small class="text-muted">Error: <?= htmlspecialchars($gradePassbackResult['error'] ?: 'Unknown error') ?></small>
-                        <?php endif; ?>
-                    </div>
-                <?php elseif ($matchedActivity): ?>
-                    <!-- Show grade submission form -->
-                    <div class="grade-box">
-                        <h5>Submit Grade to Gradebook</h5>
-                        <div class="matched-activity">
+                            <h5>Grade Synced to Gradebook</h5>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>Matched Activity:</strong> <?= htmlspecialchars($matchedActivity['activity']['name']) ?>
-                                    <?php
-                                    $currentGrade = calculateActivityGrade($matchedActivity['activity']);
-                                    $childCount = count($matchedActivity['activity']['children']);
-                                    $passedCount = 0;
-                                    foreach ($matchedActivity['activity']['children'] as $child) {
-                                        if ($child['status'] === 'passed') $passedCount++;
-                                    }
-                                    ?>
-                                    <?php if ($childCount > 0): ?>
-                                        <br><small class="text-muted"><?= $passedCount ?>/<?= $childCount ?> tasks passed</small>
+                                    <p class="mb-0">
+                                        Your grade has been automatically sent to the gradebook.
+                                    </p>
+                                    <?php if ($matchedActivity): ?>
+                                        <small class="text-muted">Activity: <?= htmlspecialchars($matchedActivity['activity']['name']) ?></small>
                                     <?php endif; ?>
                                 </div>
                                 <div class="text-end">
-                                    <div class="grade-display"><?= round($currentGrade * 100) ?>%</div>
-                                    <div class="grade-label">Current Grade</div>
+                                    <div class="grade-display"><?= round($gradePassbackResult['grade'] * 100) ?>%</div>
+                                    <div class="grade-label">Grade Sent</div>
                                 </div>
                             </div>
-                        </div>
-                        <form method="POST" class="mt-3">
-                            <button type="submit" name="submit_grade" class="btn btn-success">
-                                Submit Grade to Gradebook
-                            </button>
-                            <small class="text-muted d-block mt-2">
-                                This will send your current grade (<?= round($currentGrade * 100) ?>%) to the Canvas gradebook.
-                            </small>
-                        </form>
+                        <?php else: ?>
+                            <h5>Grade Sync Failed</h5>
+                            <p class="text-danger mb-0">
+                                There was an error syncing your grade to the gradebook.
+                            </p>
+                            <small class="text-muted">Error: <?= htmlspecialchars($gradePassbackResult['error'] ?: 'Unknown error') ?></small>
+                        <?php endif; ?>
                     </div>
                 <?php else: ?>
                     <!-- No matching activity found -->
