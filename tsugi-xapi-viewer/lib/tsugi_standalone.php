@@ -6,7 +6,7 @@
  * Supports both LTI 1.1 (OAuth 1.0a) and LTI 1.3 (OAuth 2.0 / JWT).
  */
 
-namespace Tsugi\Core;
+namespace Tsugi\Core {
 
 class LTIX {
     /**
@@ -290,11 +290,15 @@ class LTIX {
     const LINK = 3;
 }
 
-namespace Tsugi\Util;
+} // End namespace Tsugi\Core
+
+namespace Tsugi\Util {
 
 class LTI {
     // Placeholder for LTI utility functions
 }
+
+} // End namespace Tsugi\Util
 
 // Return to global namespace for helper classes and initialization
 namespace {
