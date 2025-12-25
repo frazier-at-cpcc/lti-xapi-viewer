@@ -6,42 +6,6 @@
  * Supports both LTI 1.1 (OAuth 1.0a) and LTI 1.3 (OAuth 2.0 / JWT).
  */
 
-// Configure session cookie for iframe/cross-origin LTI usage
-if (PHP_VERSION_ID >= 70300) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'None'
-    ]);
-} else {
-    session_set_cookie_params(0, '/; SameSite=None; Secure', '', true, true);
-}
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Global configuration
-if (!isset($CFG)) {
-    $CFG = new stdClass();
-}
-
-$CFG->wwwroot = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
-    . dirname($_SERVER['REQUEST_URI'] ?? '/');
-$CFG->staticroot = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0';
-
-// Load configuration file if available
-if (file_exists(__DIR__ . '/../config.php')) {
-    require_once __DIR__ . '/../config.php';
-}
-
-/**
- * Minimal Tsugi Core LTIX Class
- */
 namespace Tsugi\Core;
 
 class LTIX {
@@ -50,6 +14,9 @@ class LTIX {
      */
     public static function requireData($needed = self::ALL, $pdox = false) {
         global $CFG;
+
+        // Initialize session if not already started
+        self::initSession();
 
         $launch = new \StandaloneLaunch();
 
@@ -82,6 +49,31 @@ class LTIX {
         }
 
         self::abort('Please launch this tool from your LMS');
+    }
+
+    /**
+     * Initialize session with proper cookie settings for LTI iframes
+     */
+    private static function initSession() {
+        if (session_status() === \PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        // Configure session cookie for iframe/cross-origin LTI usage
+        if (\PHP_VERSION_ID >= 70300) {
+            session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'domain' => '',
+                'secure' => true,
+                'httponly' => true,
+                'samesite' => 'None'
+            ]);
+        } else {
+            session_set_cookie_params(0, '/; SameSite=None; Secure', '', true, true);
+        }
+
+        session_start();
     }
 
     /**
@@ -304,8 +296,18 @@ class LTI {
     // Placeholder for LTI utility functions
 }
 
-// Return to global namespace for helper classes
+// Return to global namespace for helper classes and initialization
 namespace {
+
+// Global configuration
+if (!isset($CFG)) {
+    $CFG = new stdClass();
+}
+
+$CFG->wwwroot = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+    . dirname($_SERVER['REQUEST_URI'] ?? '/');
+$CFG->staticroot = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0';
 
 /**
  * Standalone Launch Object
