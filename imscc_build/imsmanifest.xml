@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="rhcsa-labs-course"
+    xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1"
+    xmlns:lom="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource"
+    xmlns:lomimscc="http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1 http://www.imsglobal.org/profile/cc/ccv1p1/ccv1p1_imscp_v1p2_v1p0.xsd
+    http://ltsc.ieee.org/xsd/imsccv1p1/LOM/resource http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lomresource_v1p0.xsd
+    http://ltsc.ieee.org/xsd/imsccv1p1/LOM/manifest http://www.imsglobal.org/profile/cc/ccv1p1/LOM/ccv1p1_lommanifest_v1p0.xsd">
+
+    <metadata>
+        <schema>IMS Common Cartridge</schema>
+        <schemaversion>1.1.0</schemaversion>
+        <lomimscc:lom>
+            <lomimscc:general>
+                <lomimscc:title>
+                    <lomimscc:string language="en-US">RHCSA Labs - RH124 Training</lomimscc:string>
+                </lomimscc:title>
+                <lomimscc:description>
+                    <lomimscc:string language="en-US">Red Hat Certified System Administrator training labs with xAPI-based progress tracking and automatic grade synchronization.</lomimscc:string>
+                </lomimscc:description>
+            </lomimscc:general>
+        </lomimscc:lom>
+    </metadata>
+
+    <organizations>
+        <organization identifier="org_1" structure="rooted-hierarchy">
+            <item identifier="root">
+                <!-- Module 1: CLI Basics -->
+                <item identifier="mod_cli">
+                    <title>CLI Basics</title>
+                    <item identifier="item_cli-desktop" identifierref="res_cli-desktop">
+                        <title>CLI Desktop</title>
+                    </item>
+                    <item identifier="item_cli-review" identifierref="res_cli-review">
+                        <title>CLI Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 2: Getting Help -->
+                <item identifier="mod_help">
+                    <title>Getting Help</title>
+                    <item identifier="item_help-manual" identifierref="res_help-manual">
+                        <title>Help Manual</title>
+                    </item>
+                    <item identifier="item_help-review" identifierref="res_help-review">
+                        <title>Help Review</title>
+                    </item>
+                    <item identifier="item_lightspeed-assistant" identifierref="res_lightspeed-assistant">
+                        <title>Lightspeed Assistant</title>
+                    </item>
+                </item>
+
+                <!-- Module 3: File Management -->
+                <item identifier="mod_files">
+                    <title>File Management</title>
+                    <item identifier="item_files-manage" identifierref="res_files-manage">
+                        <title>Files Manage</title>
+                    </item>
+                    <item identifier="item_files-make" identifierref="res_files-make">
+                        <title>Files Make</title>
+                    </item>
+                    <item identifier="item_files-review" identifierref="res_files-review">
+                        <title>Files Review</title>
+                    </item>
+                    <item identifier="item_edit-file" identifierref="res_edit-file">
+                        <title>Edit File</title>
+                    </item>
+                </item>
+
+                <!-- Module 4: Shell I/O -->
+                <item identifier="mod_shellio">
+                    <title>Shell I/O</title>
+                    <item identifier="item_shellio-redirect" identifierref="res_shellio-redirect">
+                        <title>Shell I/O Redirect</title>
+                    </item>
+                </item>
+
+                <!-- Module 5: Users and Groups -->
+                <item identifier="mod_users">
+                    <title>Users and Groups</title>
+                    <item identifier="item_users-superuser" identifierref="res_users-superuser">
+                        <title>Users Superuser</title>
+                    </item>
+                    <item identifier="item_users-user" identifierref="res_users-user">
+                        <title>Users User</title>
+                    </item>
+                    <item identifier="item_users-group" identifierref="res_users-group">
+                        <title>Users Group</title>
+                    </item>
+                    <item identifier="item_users-password" identifierref="res_users-password">
+                        <title>Users Password</title>
+                    </item>
+                    <item identifier="item_users-review" identifierref="res_users-review">
+                        <title>Users Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 6: Permissions -->
+                <item identifier="mod_perms">
+                    <title>Permissions</title>
+                    <item identifier="item_perms-cli" identifierref="res_perms-cli">
+                        <title>Permissions CLI</title>
+                    </item>
+                    <item identifier="item_perms-default" identifierref="res_perms-default">
+                        <title>Permissions Default</title>
+                    </item>
+                    <item identifier="item_perms-review" identifierref="res_perms-review">
+                        <title>Permissions Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 7: Software Management -->
+                <item identifier="mod_software">
+                    <title>Software Management</title>
+                    <item identifier="item_software-rpm" identifierref="res_software-rpm">
+                        <title>Software RPM</title>
+                    </item>
+                    <item identifier="item_software-dnf" identifierref="res_software-dnf">
+                        <title>Software DNF</title>
+                    </item>
+                    <item identifier="item_software-repo" identifierref="res_software-repo">
+                        <title>Software Repo</title>
+                    </item>
+                    <item identifier="item_software-review" identifierref="res_software-review">
+                        <title>Software Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 8: Flatpak -->
+                <item identifier="mod_flatpak">
+                    <title>Flatpak</title>
+                    <item identifier="item_flatpak-configure" identifierref="res_flatpak-configure">
+                        <title>Flatpak Configure</title>
+                    </item>
+                    <item identifier="item_flatpak-application" identifierref="res_flatpak-application">
+                        <title>Flatpak Application</title>
+                    </item>
+                </item>
+
+                <!-- Module 9: Filesystem -->
+                <item identifier="mod_fs">
+                    <title>Filesystem</title>
+                    <item identifier="item_fs-mount" identifierref="res_fs-mount">
+                        <title>Filesystem Mount</title>
+                    </item>
+                    <item identifier="item_fs-locate" identifierref="res_fs-locate">
+                        <title>Filesystem Locate</title>
+                    </item>
+                    <item identifier="item_fs-review" identifierref="res_fs-review">
+                        <title>Filesystem Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 10: Processes -->
+                <item identifier="mod_processes">
+                    <title>Processes</title>
+                    <item identifier="item_processes-control" identifierref="res_processes-control">
+                        <title>Processes Control</title>
+                    </item>
+                    <item identifier="item_processes-kill" identifierref="res_processes-kill">
+                        <title>Processes Kill</title>
+                    </item>
+                    <item identifier="item_processes-monitor" identifierref="res_processes-monitor">
+                        <title>Processes Monitor</title>
+                    </item>
+                    <item identifier="item_processes-review" identifierref="res_processes-review">
+                        <title>Processes Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 11: Services -->
+                <item identifier="mod_services">
+                    <title>Services</title>
+                    <item identifier="item_services-identify" identifierref="res_services-identify">
+                        <title>Services Identify</title>
+                    </item>
+                    <item identifier="item_services-control" identifierref="res_services-control">
+                        <title>Services Control</title>
+                    </item>
+                    <item identifier="item_services-review" identifierref="res_services-review">
+                        <title>Services Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 12: Networking -->
+                <item identifier="mod_networking">
+                    <title>Networking</title>
+                    <item identifier="item_netbasics-validate" identifierref="res_netbasics-validate">
+                        <title>Network Basics Validate</title>
+                    </item>
+                    <item identifier="item_net-configure" identifierref="res_net-configure">
+                        <title>Network Configure</title>
+                    </item>
+                    <item identifier="item_net-edit" identifierref="res_net-edit">
+                        <title>Network Edit</title>
+                    </item>
+                    <item identifier="item_net-hostnames" identifierref="res_net-hostnames">
+                        <title>Network Hostnames</title>
+                    </item>
+                    <item identifier="item_net-review" identifierref="res_net-review">
+                        <title>Network Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 13: SSH -->
+                <item identifier="mod_ssh">
+                    <title>SSH</title>
+                    <item identifier="item_ssh-hostkeys" identifierref="res_ssh-hostkeys">
+                        <title>SSH Host Keys</title>
+                    </item>
+                    <item identifier="item_ssh-keyauth" identifierref="res_ssh-keyauth">
+                        <title>SSH Key Auth</title>
+                    </item>
+                    <item identifier="item_ssh-review" identifierref="res_ssh-review">
+                        <title>SSH Review</title>
+                    </item>
+                </item>
+
+                <!-- Module 14: RHCSA Review Labs -->
+                <item identifier="mod_rhcsa">
+                    <title>RHCSA RH124 Review</title>
+                    <item identifier="item_rhcsa-rh124-review1" identifierref="res_rhcsa-rh124-review1">
+                        <title>RHCSA RH124 Review 1</title>
+                    </item>
+                    <item identifier="item_rhcsa-rh124-review2" identifierref="res_rhcsa-rh124-review2">
+                        <title>RHCSA RH124 Review 2</title>
+                    </item>
+                    <item identifier="item_rhcsa-rh124-review3" identifierref="res_rhcsa-rh124-review3">
+                        <title>RHCSA RH124 Review 3</title>
+                    </item>
+                    <item identifier="item_rhcsa-rh124-review4" identifierref="res_rhcsa-rh124-review4">
+                        <title>RHCSA RH124 Review 4</title>
+                    </item>
+                    <item identifier="item_rhcsa-rh124-review5" identifierref="res_rhcsa-rh124-review5">
+                        <title>RHCSA RH124 Review 5</title>
+                    </item>
+                </item>
+            </item>
+        </organization>
+    </organizations>
+
+    <resources>
+        <!-- CLI Basics -->
+        <resource identifier="res_cli-desktop" type="imsbasiclti_xmlv1p0" href="assignments/cli-desktop.xml">
+            <file href="assignments/cli-desktop.xml"/>
+        </resource>
+        <resource identifier="res_cli-review" type="imsbasiclti_xmlv1p0" href="assignments/cli-review.xml">
+            <file href="assignments/cli-review.xml"/>
+        </resource>
+
+        <!-- Getting Help -->
+        <resource identifier="res_help-manual" type="imsbasiclti_xmlv1p0" href="assignments/help-manual.xml">
+            <file href="assignments/help-manual.xml"/>
+        </resource>
+        <resource identifier="res_help-review" type="imsbasiclti_xmlv1p0" href="assignments/help-review.xml">
+            <file href="assignments/help-review.xml"/>
+        </resource>
+        <resource identifier="res_lightspeed-assistant" type="imsbasiclti_xmlv1p0" href="assignments/lightspeed-assistant.xml">
+            <file href="assignments/lightspeed-assistant.xml"/>
+        </resource>
+
+        <!-- File Management -->
+        <resource identifier="res_files-manage" type="imsbasiclti_xmlv1p0" href="assignments/files-manage.xml">
+            <file href="assignments/files-manage.xml"/>
+        </resource>
+        <resource identifier="res_files-make" type="imsbasiclti_xmlv1p0" href="assignments/files-make.xml">
+            <file href="assignments/files-make.xml"/>
+        </resource>
+        <resource identifier="res_files-review" type="imsbasiclti_xmlv1p0" href="assignments/files-review.xml">
+            <file href="assignments/files-review.xml"/>
+        </resource>
+        <resource identifier="res_edit-file" type="imsbasiclti_xmlv1p0" href="assignments/edit-file.xml">
+            <file href="assignments/edit-file.xml"/>
+        </resource>
+
+        <!-- Shell I/O -->
+        <resource identifier="res_shellio-redirect" type="imsbasiclti_xmlv1p0" href="assignments/shellio-redirect.xml">
+            <file href="assignments/shellio-redirect.xml"/>
+        </resource>
+
+        <!-- Users and Groups -->
+        <resource identifier="res_users-superuser" type="imsbasiclti_xmlv1p0" href="assignments/users-superuser.xml">
+            <file href="assignments/users-superuser.xml"/>
+        </resource>
+        <resource identifier="res_users-user" type="imsbasiclti_xmlv1p0" href="assignments/users-user.xml">
+            <file href="assignments/users-user.xml"/>
+        </resource>
+        <resource identifier="res_users-group" type="imsbasiclti_xmlv1p0" href="assignments/users-group.xml">
+            <file href="assignments/users-group.xml"/>
+        </resource>
+        <resource identifier="res_users-password" type="imsbasiclti_xmlv1p0" href="assignments/users-password.xml">
+            <file href="assignments/users-password.xml"/>
+        </resource>
+        <resource identifier="res_users-review" type="imsbasiclti_xmlv1p0" href="assignments/users-review.xml">
+            <file href="assignments/users-review.xml"/>
+        </resource>
+
+        <!-- Permissions -->
+        <resource identifier="res_perms-cli" type="imsbasiclti_xmlv1p0" href="assignments/perms-cli.xml">
+            <file href="assignments/perms-cli.xml"/>
+        </resource>
+        <resource identifier="res_perms-default" type="imsbasiclti_xmlv1p0" href="assignments/perms-default.xml">
+            <file href="assignments/perms-default.xml"/>
+        </resource>
+        <resource identifier="res_perms-review" type="imsbasiclti_xmlv1p0" href="assignments/perms-review.xml">
+            <file href="assignments/perms-review.xml"/>
+        </resource>
+
+        <!-- Software Management -->
+        <resource identifier="res_software-rpm" type="imsbasiclti_xmlv1p0" href="assignments/software-rpm.xml">
+            <file href="assignments/software-rpm.xml"/>
+        </resource>
+        <resource identifier="res_software-dnf" type="imsbasiclti_xmlv1p0" href="assignments/software-dnf.xml">
+            <file href="assignments/software-dnf.xml"/>
+        </resource>
+        <resource identifier="res_software-repo" type="imsbasiclti_xmlv1p0" href="assignments/software-repo.xml">
+            <file href="assignments/software-repo.xml"/>
+        </resource>
+        <resource identifier="res_software-review" type="imsbasiclti_xmlv1p0" href="assignments/software-review.xml">
+            <file href="assignments/software-review.xml"/>
+        </resource>
+
+        <!-- Flatpak -->
+        <resource identifier="res_flatpak-configure" type="imsbasiclti_xmlv1p0" href="assignments/flatpak-configure.xml">
+            <file href="assignments/flatpak-configure.xml"/>
+        </resource>
+        <resource identifier="res_flatpak-application" type="imsbasiclti_xmlv1p0" href="assignments/flatpak-application.xml">
+            <file href="assignments/flatpak-application.xml"/>
+        </resource>
+
+        <!-- Filesystem -->
+        <resource identifier="res_fs-mount" type="imsbasiclti_xmlv1p0" href="assignments/fs-mount.xml">
+            <file href="assignments/fs-mount.xml"/>
+        </resource>
+        <resource identifier="res_fs-locate" type="imsbasiclti_xmlv1p0" href="assignments/fs-locate.xml">
+            <file href="assignments/fs-locate.xml"/>
+        </resource>
+        <resource identifier="res_fs-review" type="imsbasiclti_xmlv1p0" href="assignments/fs-review.xml">
+            <file href="assignments/fs-review.xml"/>
+        </resource>
+
+        <!-- Processes -->
+        <resource identifier="res_processes-control" type="imsbasiclti_xmlv1p0" href="assignments/processes-control.xml">
+            <file href="assignments/processes-control.xml"/>
+        </resource>
+        <resource identifier="res_processes-kill" type="imsbasiclti_xmlv1p0" href="assignments/processes-kill.xml">
+            <file href="assignments/processes-kill.xml"/>
+        </resource>
+        <resource identifier="res_processes-monitor" type="imsbasiclti_xmlv1p0" href="assignments/processes-monitor.xml">
+            <file href="assignments/processes-monitor.xml"/>
+        </resource>
+        <resource identifier="res_processes-review" type="imsbasiclti_xmlv1p0" href="assignments/processes-review.xml">
+            <file href="assignments/processes-review.xml"/>
+        </resource>
+
+        <!-- Services -->
+        <resource identifier="res_services-identify" type="imsbasiclti_xmlv1p0" href="assignments/services-identify.xml">
+            <file href="assignments/services-identify.xml"/>
+        </resource>
+        <resource identifier="res_services-control" type="imsbasiclti_xmlv1p0" href="assignments/services-control.xml">
+            <file href="assignments/services-control.xml"/>
+        </resource>
+        <resource identifier="res_services-review" type="imsbasiclti_xmlv1p0" href="assignments/services-review.xml">
+            <file href="assignments/services-review.xml"/>
+        </resource>
+
+        <!-- Networking -->
+        <resource identifier="res_netbasics-validate" type="imsbasiclti_xmlv1p0" href="assignments/netbasics-validate.xml">
+            <file href="assignments/netbasics-validate.xml"/>
+        </resource>
+        <resource identifier="res_net-configure" type="imsbasiclti_xmlv1p0" href="assignments/net-configure.xml">
+            <file href="assignments/net-configure.xml"/>
+        </resource>
+        <resource identifier="res_net-edit" type="imsbasiclti_xmlv1p0" href="assignments/net-edit.xml">
+            <file href="assignments/net-edit.xml"/>
+        </resource>
+        <resource identifier="res_net-hostnames" type="imsbasiclti_xmlv1p0" href="assignments/net-hostnames.xml">
+            <file href="assignments/net-hostnames.xml"/>
+        </resource>
+        <resource identifier="res_net-review" type="imsbasiclti_xmlv1p0" href="assignments/net-review.xml">
+            <file href="assignments/net-review.xml"/>
+        </resource>
+
+        <!-- SSH -->
+        <resource identifier="res_ssh-hostkeys" type="imsbasiclti_xmlv1p0" href="assignments/ssh-hostkeys.xml">
+            <file href="assignments/ssh-hostkeys.xml"/>
+        </resource>
+        <resource identifier="res_ssh-keyauth" type="imsbasiclti_xmlv1p0" href="assignments/ssh-keyauth.xml">
+            <file href="assignments/ssh-keyauth.xml"/>
+        </resource>
+        <resource identifier="res_ssh-review" type="imsbasiclti_xmlv1p0" href="assignments/ssh-review.xml">
+            <file href="assignments/ssh-review.xml"/>
+        </resource>
+
+        <!-- RHCSA Review -->
+        <resource identifier="res_rhcsa-rh124-review1" type="imsbasiclti_xmlv1p0" href="assignments/rhcsa-rh124-review1.xml">
+            <file href="assignments/rhcsa-rh124-review1.xml"/>
+        </resource>
+        <resource identifier="res_rhcsa-rh124-review2" type="imsbasiclti_xmlv1p0" href="assignments/rhcsa-rh124-review2.xml">
+            <file href="assignments/rhcsa-rh124-review2.xml"/>
+        </resource>
+        <resource identifier="res_rhcsa-rh124-review3" type="imsbasiclti_xmlv1p0" href="assignments/rhcsa-rh124-review3.xml">
+            <file href="assignments/rhcsa-rh124-review3.xml"/>
+        </resource>
+        <resource identifier="res_rhcsa-rh124-review4" type="imsbasiclti_xmlv1p0" href="assignments/rhcsa-rh124-review4.xml">
+            <file href="assignments/rhcsa-rh124-review4.xml"/>
+        </resource>
+        <resource identifier="res_rhcsa-rh124-review5" type="imsbasiclti_xmlv1p0" href="assignments/rhcsa-rh124-review5.xml">
+            <file href="assignments/rhcsa-rh124-review5.xml"/>
+        </resource>
+    </resources>
+</manifest>
