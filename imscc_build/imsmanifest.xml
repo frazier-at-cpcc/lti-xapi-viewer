@@ -17,7 +17,7 @@
                     <lomimscc:string language="en-US">RHCSA Labs - RH124 Training</lomimscc:string>
                 </lomimscc:title>
                 <lomimscc:description>
-                    <lomimscc:string language="en-US">Red Hat Certified System Administrator training labs with xAPI-based progress tracking and automatic grade synchronization.</lomimscc:string>
+                    <lomimscc:string language="en-US">Red Hat Certified System Administrator training labs with xAPI-based progress tracking and automatic grade synchronization. Uses Tsugi-based LTI tool supporting LTI 1.1 and 1.3. Replace $TOOL_URL with your tool deployment URL before importing.</lomimscc:string>
                 </lomimscc:description>
             </lomimscc:general>
         </lomimscc:lom>

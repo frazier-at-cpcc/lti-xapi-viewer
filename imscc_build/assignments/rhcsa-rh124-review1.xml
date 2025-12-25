@@ -11,9 +11,9 @@
 
     <blti:title>RHCSA RH124 Review 1</blti:title>
     <blti:description>Comprehensive review lab 1 for RH124</blti:description>
-    <blti:launch_url>https://lti.labsconnect.org/</blti:launch_url>
-    <blti:secure_launch_url>https://lti.labsconnect.org/</blti:secure_launch_url>
-    <blti:icon>https://lti.labsconnect.org/favicon.ico</blti:icon>
+    <blti:launch_url>$TOOL_URL/tsugi-xapi-viewer/</blti:launch_url>
+    <blti:secure_launch_url>$TOOL_URL/tsugi-xapi-viewer/</blti:secure_launch_url>
+    <blti:icon>$TOOL_URL/tsugi-xapi-viewer/favicon.ico</blti:icon>
 
     <blti:custom>
         <lticm:property name="lab_id">rhcsa-rh124-review1</lticm:property>
@@ -51,10 +51,10 @@
     </blti:extensions>
 
     <blti:vendor>
-        <lticp:code>labsconnect</lticp:code>
-        <lticp:name>LabsConnect</lticp:name>
+        <lticp:code>xapi-viewer</lticp:code>
+        <lticp:name>xAPI Viewer (Tsugi)</lticp:name>
         <lticp:description>xAPI Learning Records Viewer with LTI Grade Passback</lticp:description>
-        <lticp:url>https://lti.labsconnect.org</lticp:url>
+        <lticp:url>$TOOL_URL/tsugi-xapi-viewer/</lticp:url>
         <lticp:contact>
             <lticp:email>support@labsconnect.org</lticp:email>
         </lticp:contact>
