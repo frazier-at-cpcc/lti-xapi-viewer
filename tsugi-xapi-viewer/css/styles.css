@@ -1,0 +1,295 @@
+/**
+ * xAPI Learning Records Viewer Styles
+ */
+
+body {
+    background-color: #f8f9fa;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+/* Record card styles */
+.record-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.record-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+/* Verb badges */
+.verb-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.verb-completed { background-color: #d4edda; color: #155724; }
+.verb-attempted { background-color: #fff3cd; color: #856404; }
+.verb-passed { background-color: #cce5ff; color: #004085; }
+.verb-failed { background-color: #f8d7da; color: #721c24; }
+.verb-default { background-color: #e2e3e5; color: #383d41; }
+
+/* Timestamps and names */
+.timestamp {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.object-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.score-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* No records display */
+.no-records {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 10px;
+}
+
+/* Stats cards */
+.stats-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+/* Error box */
+.error-box {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+}
+
+/* Summary card styles */
+.summary-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-left: 4px solid #e2e3e5;
+}
+
+.summary-card.status-passed { border-left-color: #28a745; }
+.summary-card.status-failed { border-left-color: #dc3545; }
+.summary-card.status-completed { border-left-color: #17a2b8; }
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-passed { background-color: #d4edda; color: #155724; }
+.status-failed { background-color: #f8d7da; color: #721c24; }
+.status-completed { background-color: #d1ecf1; color: #0c5460; }
+.status-attempted { background-color: #fff3cd; color: #856404; }
+
+/* Score displays */
+.best-score {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.attempt-count {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Attempts list */
+.attempts-list {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.attempt-item {
+    padding: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.attempt-item:last-child {
+    border-bottom: none;
+}
+
+.attempt-score {
+    font-weight: 600;
+    color: #495057;
+}
+
+.verb-badge-small {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Toggle button text */
+.toggle-attempts .hide-text { display: none; }
+.toggle-attempts[aria-expanded="true"] .show-text { display: none; }
+.toggle-attempts[aria-expanded="true"] .hide-text { display: inline; }
+
+/* Task count */
+.task-count {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Children/task list */
+.children-list {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.child-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
+    border-left: 3px solid #e2e3e5;
+    background: white;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+.child-item:last-child {
+    margin-bottom: 0;
+}
+
+.child-item.status-passed { border-left-color: #28a745; }
+.child-item.status-failed { border-left-color: #dc3545; }
+.child-item.status-completed { border-left-color: #17a2b8; }
+
+.child-status-icon {
+    font-weight: bold;
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.child-status-icon.status-passed { color: #28a745; }
+.child-status-icon.status-failed { color: #dc3545; }
+.child-status-icon.status-completed { color: #17a2b8; }
+.child-status-icon.status-attempted { color: #856404; }
+
+.child-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.child-score {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Grade passback styles */
+.grade-box {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-left: 4px solid #667eea;
+}
+
+.grade-box.grade-success {
+    border-left-color: #28a745;
+    background: #f8fff8;
+}
+
+.grade-box.grade-error {
+    border-left-color: #dc3545;
+    background: #fff8f8;
+}
+
+.grade-box h5 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.grade-display {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.grade-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.matched-activity {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+}
+
+.no-match-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header {
+        padding: 20px;
+    }
+
+    .stats-number {
+        font-size: 1.5rem;
+    }
+
+    .grade-display {
+        font-size: 1.5rem;
+    }
+
+    .best-score {
+        font-size: 1.2rem;
+    }
+}

@@ -1,0 +1,71 @@
+# xAPI Learning Records Viewer - Apache Configuration
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Force HTTPS in production (uncomment if using SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Set default directory index
+DirectoryIndex index.php
+
+# Prevent directory listing
+Options -Indexes
+
+# Allow .htaccess overrides
+Options +FollowSymLinks
+
+# PHP settings for sessions in iframes
+<IfModule mod_php.c>
+    php_value session.cookie_samesite "None"
+    php_flag session.cookie_secure On
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    # Allow framing by any origin (required for LTI in iframes)
+    Header always unset X-Frame-Options
+
+    # Content Security Policy - allow framing
+    Header set Content-Security-Policy "frame-ancestors *;"
+
+    # Other security headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# CORS headers for LTI 1.3
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Authorization, Content-Type, X-Experience-API-Version"
+</IfModule>
+
+# Handle OPTIONS preflight requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Protect sensitive files
+<FilesMatch "^(config\.php|\.env|composer\.json|composer\.lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block access to hidden files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  xapi-viewer:
+    build: .
+    container_name: xapi-viewer-tsugi
+    ports:
+      - "8080:80"
+    environment:
+      # LTI 1.1 Configuration
+      - LTI_CONSUMER_KEY=xapi_viewer_key
+      - LTI_CONSUMER_SECRET=xapi_viewer_secret
+
+      # LTI 1.3 Configuration (optional)
+      - LTI13_ISSUER=
+      - LTI13_CLIENT_ID=
+      - LTI13_DEPLOYMENT_ID=
+      - LTI13_KEYSET_URL=
+      - LTI13_AUTH_URL=
+      - LTI13_TOKEN_URL=
+      - LTI13_PRIVATE_KEY=
+
+      # LRS Configuration
+      - LRS_ENDPOINT=http://sql-lrs:8080/xapi
+      - LRS_API_KEY=my_api_key
+      - LRS_API_SECRET=my_api_secret
+
+      # Application Settings
+      - APP_TIMEZONE=America/New_York
+      - APP_DEBUG=false
+    volumes:
+      - ./:/var/www/html:ro
+      - ./keys:/var/www/html/keys
+    networks:
+      - lti-network
+    depends_on:
+      - sql-lrs
+
+  sql-lrs:
+    image: yetanalytics/lrsql:latest
+    container_name: sql-lrs
+    ports:
+      - "8081:8080"
+    environment:
+      - LRSQL_API_KEY_DEFAULT=my_api_key
+      - LRSQL_API_SECRET_DEFAULT=my_api_secret
+      - LRSQL_ADMIN_USER_DEFAULT=admin
+      - LRSQL_ADMIN_PASS_DEFAULT=admin123
+      - LRSQL_DB_TYPE=sqlite
+      - LRSQL_DB_NAME=/data/lrsql.sqlite
+    volumes:
+      - lrs-data:/data
+    networks:
+      - lti-network
+
+networks:
+  lti-network:
+    driver: bridge
+
+volumes:
+  lrs-data:
